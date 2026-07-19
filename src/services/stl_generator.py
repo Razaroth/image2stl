@@ -14,7 +14,7 @@ class STLGenerator:
         X: np.ndarray, Y: np.ndarray, Z: np.ndarray
     ) -> trimesh.Trimesh:
         """
-        Create a 3D mesh from height map data.
+        Create a 3D mesh from height map data with closed bottom.
 
         Args:
             X: X coordinates (mesh grid)
@@ -24,24 +24,88 @@ class STLGenerator:
         Returns:
             Trimesh object representing the 3D model
         """
-        # Flatten the mesh grids to create vertices
-        vertices = np.column_stack([X.flat, Y.flat, Z.flat])
-        
-        # Create faces by connecting adjacent vertices
         height, width = X.shape
-        faces = []
         
+        # Find minimum Z value for the base
+        min_z = np.min(Z)
+        
+        # Create vertices: top surface vertices + bottom surface vertices
+        top_vertices = np.column_stack([X.flat, Y.flat, Z.flat])
+        bottom_vertices = np.column_stack([X.flat, Y.flat, np.full_like(Z.flat, min_z)])
+        
+        # Combine all vertices
+        vertices = np.vstack([top_vertices, bottom_vertices])
+        
+        # Create faces
+        faces = []
+        num_top_verts = height * width
+        
+        # Top surface faces
         for i in range(height - 1):
             for j in range(width - 1):
-                # Vertex indices for this quad
+                # Vertex indices for this quad on top
                 v0 = i * width + j
                 v1 = i * width + (j + 1)
                 v2 = (i + 1) * width + (j + 1)
                 v3 = (i + 1) * width + j
                 
-                # Create two triangles from quad
+                # Create two triangles from quad (top surface)
                 faces.append([v0, v1, v2])
                 faces.append([v0, v2, v3])
+        
+        # Bottom surface faces (reverse winding for correct normals)
+        for i in range(height - 1):
+            for j in range(width - 1):
+                # Vertex indices for this quad on bottom
+                v0 = num_top_verts + i * width + j
+                v1 = num_top_verts + i * width + (j + 1)
+                v2 = num_top_verts + (i + 1) * width + (j + 1)
+                v3 = num_top_verts + (i + 1) * width + j
+                
+                # Create two triangles from quad (bottom surface, reverse winding)
+                faces.append([v0, v2, v1])
+                faces.append([v0, v3, v2])
+        
+        # Side walls - connect top and bottom edges
+        # Top edge (i=0)
+        for j in range(width - 1):
+            v_top_0 = 0 * width + j
+            v_top_1 = 0 * width + (j + 1)
+            v_bot_0 = num_top_verts + 0 * width + j
+            v_bot_1 = num_top_verts + 0 * width + (j + 1)
+            
+            faces.append([v_top_0, v_bot_0, v_bot_1])
+            faces.append([v_top_0, v_bot_1, v_top_1])
+        
+        # Bottom edge (i=height-1)
+        for j in range(width - 1):
+            v_top_0 = (height - 1) * width + j
+            v_top_1 = (height - 1) * width + (j + 1)
+            v_bot_0 = num_top_verts + (height - 1) * width + j
+            v_bot_1 = num_top_verts + (height - 1) * width + (j + 1)
+            
+            faces.append([v_top_0, v_bot_1, v_bot_0])
+            faces.append([v_top_0, v_top_1, v_bot_1])
+        
+        # Left edge (j=0)
+        for i in range(height - 1):
+            v_top_0 = i * width + 0
+            v_top_1 = (i + 1) * width + 0
+            v_bot_0 = num_top_verts + i * width + 0
+            v_bot_1 = num_top_verts + (i + 1) * width + 0
+            
+            faces.append([v_top_0, v_bot_1, v_bot_0])
+            faces.append([v_top_0, v_top_1, v_bot_1])
+        
+        # Right edge (j=width-1)
+        for i in range(height - 1):
+            v_top_0 = i * width + (width - 1)
+            v_top_1 = (i + 1) * width + (width - 1)
+            v_bot_0 = num_top_verts + i * width + (width - 1)
+            v_bot_1 = num_top_verts + (i + 1) * width + (width - 1)
+            
+            faces.append([v_top_0, v_bot_0, v_bot_1])
+            faces.append([v_top_0, v_bot_1, v_top_1])
         
         faces = np.array(faces, dtype=np.int64)
         
