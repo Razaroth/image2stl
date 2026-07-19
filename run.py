@@ -9,12 +9,12 @@ import os
 from pathlib import Path
 
 # Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 def main():
     """Launch the Image2STL GUI application."""
     try:
-        from src.gui.app import Image2STLGUI
+        from gui.app import main as gui_main
         
         print("=" * 60)
         print("  Image2STL - Image to 3D STL Converter")
@@ -23,9 +23,8 @@ def main():
         print("Launching application...")
         print()
         
-        # Create and run the GUI
-        app = Image2STLGUI()
-        app.main()
+        # Launch the GUI
+        gui_main()
         
     except ImportError as e:
         print("Error: Required modules not found.", file=sys.stderr)
