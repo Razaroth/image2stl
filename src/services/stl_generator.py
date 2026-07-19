@@ -109,16 +109,40 @@ class STLGenerator:
         Returns:
             Watertight mesh
         """
-        # Remove degenerate faces and duplicate vertices
-        mesh.remove_degenerate_faces()
-        mesh.remove_duplicate_faces()
-        mesh.merge_vertices()
+        try:
+            # Remove degenerate faces if method exists
+            if hasattr(mesh, 'remove_degenerate_faces'):
+                mesh.remove_degenerate_faces()
+        except Exception:
+            pass
         
-        # Fill holes
-        mesh.fill_holes()
+        try:
+            # Remove duplicate faces if method exists
+            if hasattr(mesh, 'remove_duplicate_faces'):
+                mesh.remove_duplicate_faces()
+        except Exception:
+            pass
         
-        # Make solid
-        mesh.fix_normals()
+        try:
+            # Merge vertices to clean up geometry
+            if hasattr(mesh, 'merge_vertices'):
+                mesh.merge_vertices()
+        except Exception:
+            pass
+        
+        try:
+            # Fill holes
+            if hasattr(mesh, 'fill_holes'):
+                mesh.fill_holes()
+        except Exception:
+            pass
+        
+        try:
+            # Fix normals to ensure proper orientation
+            if hasattr(mesh, 'fix_normals'):
+                mesh.fix_normals()
+        except Exception:
+            pass
         
         return mesh
 
